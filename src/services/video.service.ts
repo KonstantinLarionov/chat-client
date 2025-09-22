@@ -10,9 +10,16 @@ export class VideoChatService {
   public remoteVideoAdded = new EventEmitter<MediaStream>();
 
   async initLocalVideo(videoElement: HTMLVideoElement) {
-    this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    this.localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
     videoElement.srcObject = this.localStream;
-    videoElement.muted = true; // 🔑 обязательно, чтобы не слышать себя
+    videoElement.muted = true; // не слышим себя
   }
 
   join(room: string) {
@@ -25,7 +32,6 @@ export class VideoChatService {
       this.socket.emit("offer", { to: id, sdp: offer });
     });
 
-    // @ts-ignore
     this.socket.on("offer", async ({ from, sdp }) => {
       const pc = this.createPeerConnection(from);
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -34,20 +40,33 @@ export class VideoChatService {
       this.socket.emit("answer", { to: from, sdp: answer });
     });
 
-    // @ts-ignore
     this.socket.on("answer", async ({ from, sdp }) => {
       await this.peers[from].setRemoteDescription(new RTCSessionDescription(sdp));
     });
 
-    // @ts-ignore
     this.socket.on("candidate", async ({ from, candidate }) => {
-      await this.peers[from].addIceCandidate(new RTCIceCandidate(candidate));
+      if (this.peers[from]) {
+        try {
+          await this.peers[from].addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("Ошибка ICE:", err);
+        }
+      }
     });
   }
 
   private createPeerConnection(id: string) {
-    const pc = new RTCPeerConnection();
-    this.localStream?.getTracks().forEach(track => pc.addTrack(track, this.localStream!));
+    // 🔑 добавляем STUN сервер
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' }
+      ]
+    });
+
+    // прикрепляем локальные треки
+    this.localStream?.getTracks().forEach(track =>
+      pc.addTrack(track, this.localStream!)
+    );
 
     pc.onicecandidate = e => {
       if (e.candidate) {
@@ -56,8 +75,10 @@ export class VideoChatService {
     };
 
     pc.ontrack = e => {
-
-      this.remoteVideoAdded.emit(e.streams[0]);
+      const stream = e.streams[0];
+      // 🔑 защита: не добавлять свой же поток
+      if (this.localStream && stream.id === this.localStream.id) return;
+      this.remoteVideoAdded.emit(stream);
     };
 
     this.peers[id] = pc;
