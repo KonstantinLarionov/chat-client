@@ -5,23 +5,27 @@ import { io } from 'socket.io-client';
 export class VideoChatService {
   private socket = io("https://chat-cignalserver.onrender.com");
   private peers: { [id: string]: RTCPeerConnection } = {};
-  private localStream?: MediaStream;
+  public localStream?: MediaStream;
 
   public remoteVideoAdded = new EventEmitter<MediaStream>();
-  private localVideoElement?: HTMLVideoElement;
+  isScreenSharing = false;
 
-  async initLocalVideo(videoElement: HTMLVideoElement) {
-    this.localVideoElement = videoElement; // 🔑 сохранили
+  async initLocalVideo(videoElement: HTMLVideoElement, withVideo: boolean = true): Promise<MediaStream> {
     this.localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+      video: withVideo,
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true
       }
     });
-    videoElement.srcObject = this.localStream;
-    videoElement.muted = true;
+
+    if (withVideo) {
+      videoElement.srcObject = this.localStream;
+      videoElement.muted = true;
+    }
+
+    return this.localStream;
   }
 
   join(room: string) {
@@ -57,22 +61,16 @@ export class VideoChatService {
     });
   }
 
-  isScreenSharing = false;
-
-  async toggleScreenShare() {
+  async toggleScreenShare(videoElement: HTMLVideoElement) {
     if (this.isScreenSharing) {
-      // вернуть камеру
-      if (!this.localStream || !this.localVideoElement) return;
+      // вернуться на камеру
+      if (!this.localStream) return;
       const cameraTrack = this.localStream.getVideoTracks()[0];
-
       for (const pc of Object.values(this.peers)) {
         const sender = pc.getSenders().find(s => s.track?.kind === "video");
-        if (sender) sender.replaceTrack(cameraTrack);
+        if (sender) await sender.replaceTrack(cameraTrack);
       }
-
-      // 🔑 вернуть отображение камеры в localVideo
-      this.localVideoElement.srcObject = this.localStream;
-
+      videoElement.srcObject = this.localStream;
       this.isScreenSharing = false;
     } else {
       try {
@@ -81,17 +79,12 @@ export class VideoChatService {
 
         for (const pc of Object.values(this.peers)) {
           const sender = pc.getSenders().find(s => s.track?.kind === "video");
-          if (sender) sender.replaceTrack(screenTrack);
+          if (sender) await sender.replaceTrack(screenTrack);
         }
 
-        // 🔑 показать экран локально
-        if (this.localVideoElement) {
-          this.localVideoElement.srcObject = screenStream;
-        }
+        videoElement.srcObject = screenStream;
 
-        // если пользователь сам закрыл шаринг
-        screenTrack.onended = () => this.toggleScreenShare();
-
+        screenTrack.onended = () => this.toggleScreenShare(videoElement);
         this.isScreenSharing = true;
       } catch (err) {
         console.error("Ошибка при шаринге экрана:", err);
@@ -99,43 +92,11 @@ export class VideoChatService {
     }
   }
 
-
-
-  async shareScreen() {
-    try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = screenStream.getVideoTracks()[0];
-
-      for (const pc of Object.values(this.peers)) {
-        const sender = pc.getSenders().find(s => s.track?.kind === "video");
-        if (sender) sender.replaceTrack(screenTrack);
-      }
-
-      screenTrack.onended = () => this.stopScreenShare();
-    } catch (err) {
-      console.error("Ошибка при шаринге экрана:", err);
-    }
-  }
-
-  private stopScreenShare() {
-    if (!this.localStream) return;
-    const cameraTrack = this.localStream.getVideoTracks()[0];
-    for (const pc of Object.values(this.peers)) {
-      const sender = pc.getSenders().find(s => s.track?.kind === "video");
-      if (sender) sender.replaceTrack(cameraTrack);
-    }
-  }
-
-
   private createPeerConnection(id: string) {
-    // 🔑 добавляем STUN сервер
     const pc = new RTCPeerConnection({
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' }
-      ]
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
 
-    // прикрепляем локальные треки
     this.localStream?.getTracks().forEach(track =>
       pc.addTrack(track, this.localStream!)
     );
@@ -148,12 +109,18 @@ export class VideoChatService {
 
     pc.ontrack = e => {
       const stream = e.streams[0];
-      // 🔑 защита: не добавлять свой же поток
       if (this.localStream && stream.id === this.localStream.id) return;
-      this.remoteVideoAdded.emit(stream);
+
+      // определяем: экран или камера
+      if (stream.getVideoTracks()[0]?.label.toLowerCase().includes("screen")) {
+        this.remoteVideoAdded.emit(Object.assign(stream, { isScreen: true }));
+      } else {
+        this.remoteVideoAdded.emit(stream);
+      }
     };
 
     this.peers[id] = pc;
     return pc;
   }
 }
+

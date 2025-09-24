@@ -4,64 +4,86 @@
   height: 100vh;
   background: #2d2d2d;
   color: white;
+  overflow: hidden;
 }
 
-.videos {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* Экран по центру */
+.screen-wrapper {
+  flex: 1 1 auto;          /* занимает всё свободное место */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: black;
+}
+.screen-wrapper video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Панель участников снизу */
+.participants-bar {
+  flex: 0 0 auto;          /* не растягивается */
+  display: flex;
   gap: 8px;
   padding: 8px;
-  background: #d1d1d1;
-  border-radius: 0 0 16px 16px;
+  background: #1e1e1e;
+  max-height: 20vh;        /* максимум 20% высоты экрана */
+  overflow-x: auto;
 }
-
-.video-cell {
-  position: relative;
-  background: #555;
+.participants-bar .video-cell {
+  flex: 0 0 200px;
+  height: 100%;
   border-radius: 8px;
   overflow: hidden;
 }
 
-video {
+/* Сетка без шаринга */
+.videos-grid {
+  flex: 1 1 auto;          /* тоже растягивается */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 8px;
+  padding: 8px;
+}
+
+.video-cell {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #555;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.video-cell video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  background: #333;
+}
+
+/* Контролы всегда внизу */
 .controls {
-  margin-top: auto;
+  flex: 0 0 auto;          /* фиксируем внизу */
   display: flex;
   justify-content: center;
   gap: 12px;
   padding: 12px;
   background: #444;
 }
-
-button {
-  background: #1976d2;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
-}
-button:hover {
-  background: #1565c0;
-}
-button:active {
-  background: #0d47a1;
-}
-.controls button {
-  background: #1976d2;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
-}
-
 .controls button {
   background: #1976d2;
   border: none;
@@ -72,35 +94,14 @@ button:active {
   font-size: 14px;
   transition: background 0.2s;
 }
-
-.controls button {
-  background: #1976d2;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
-  transition: background 0.2s;
+.controls button:hover { opacity: 0.85; }
+.mic-on, .cam-on { background: #2e7d32 !important; }
+.mic-off, .cam-off { background: #c62828 !important; }
+.controls-wrapper {
+  flex: 0 0 200px;   /* ← фиксируем высоту */
+  height: 200px;     /* ← для надёжности */
 }
-
-.controls button:hover {
-  opacity: 0.85;
-}
-
-/* Микрофон */
-.mic-on {
-  background: #2e7d32 !important; /* зелёный */
-}
-.mic-off {
-  background: #c62828 !important; /* красный */
-}
-
-/* Камера */
-.cam-on {
-  background: #2e7d32 !important; /* зелёный */
-}
-.cam-off {
-  background: #c62828 !important; /* красный */
+video {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
