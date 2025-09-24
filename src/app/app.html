@@ -1,11 +1,42 @@
 <div class="video-chat">
-  <div class="local">
-    <video #localVideo autoplay muted playsinline></video>
+  <!-- верхняя панель с видео -->
+  <div class="videos">
+    <!-- локальное видео -->
+    <div class="video-cell">
+      <video #localVideo autoplay muted playsinline></video>
+    </div>
+
+    <!-- чужие -->
+    <div class="video-cell" *ngFor="let stream of remoteStreams">
+      <video [srcObject]="stream" autoplay playsinline></video>
+    </div>
   </div>
 
-  <div class="remotes">
-    <video *ngFor="let stream of remoteStreams" [srcObject]="stream" autoplay playsinline></video>
-  </div>
+  <!-- нижняя панель управления -->
+  <div class="controls">
+    <button (click)="start()">▶️ Join</button>
+    <button (click)="toggleScreen()">
+      {{ chat.isScreenSharing ? '📷 Камера' : '🖥️ Экран' }}
+    </button>
+    <!-- 📷 камера -->
+    <button
+      (click)="toggleCamera()"
+      [class.cam-on]="cameraEnabled"
+      [class.cam-off]="!cameraEnabled">
+      📷
+    </button>
 
-  <button (click)="start()">Join Room</button>
+    <!-- 🔑 микрофон -->
+    <button
+      (click)="toggleMic()"
+      [class.mic-on]="micEnabled"
+      [class.mic-off]="!micEnabled">
+      🎤
+    </button>
+    <button (click)="leave()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5.625 0.75V6H6.375V0.75H5.625Z" fill="white"/>
+      <path d="M2.25003 6.60899C2.24984 5.93922 2.42909 5.28162 2.76911 4.70458C3.10914 4.12753 3.59754 3.65211 4.18353 3.32774L3.81978 2.67224C2.95017 3.15379 2.26448 3.90972 1.86976 4.82203C1.47503 5.73433 1.39349 6.75165 1.63785 7.71518C1.88221 8.67871 2.43873 9.53422 3.22053 10.1481C4.00232 10.7621 4.96539 11.0999 5.95938 11.1088C6.95338 11.1177 7.92235 10.7972 8.71504 10.1974C9.50772 9.59764 10.0795 8.75226 10.3411 7.79327C10.6027 6.83428 10.5394 5.81566 10.1612 4.89642C9.78287 3.97718 9.11085 3.20907 8.25003 2.71199L7.87428 3.36074C8.44445 3.68975 8.91796 4.16306 9.24723 4.73309C9.57649 5.30312 9.7499 5.94977 9.75003 6.60806C9.75015 7.26635 9.57698 7.91308 9.24793 8.48323C8.91888 9.05338 8.44555 9.52687 7.8755 9.85609C7.30545 10.1853 6.65878 10.3587 6.00049 10.3588C5.3422 10.3589 4.69549 10.1856 4.12536 9.85656C3.55523 9.52747 3.08177 9.0541 2.75258 8.48403C2.42339 7.91396 2.25007 7.26728 2.25003 6.60899Z" fill="white"/>
+    </svg>
+    </button>
+  </div>
 </div>

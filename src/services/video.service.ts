@@ -8,8 +8,10 @@ export class VideoChatService {
   private localStream?: MediaStream;
 
   public remoteVideoAdded = new EventEmitter<MediaStream>();
+  private localVideoElement?: HTMLVideoElement;
 
   async initLocalVideo(videoElement: HTMLVideoElement) {
+    this.localVideoElement = videoElement; // 🔑 сохранили
     this.localStream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: {
@@ -19,7 +21,7 @@ export class VideoChatService {
       }
     });
     videoElement.srcObject = this.localStream;
-    videoElement.muted = true; // не слышим себя
+    videoElement.muted = true;
   }
 
   join(room: string) {
@@ -54,6 +56,76 @@ export class VideoChatService {
       }
     });
   }
+
+  isScreenSharing = false;
+
+  async toggleScreenShare() {
+    if (this.isScreenSharing) {
+      // вернуть камеру
+      if (!this.localStream || !this.localVideoElement) return;
+      const cameraTrack = this.localStream.getVideoTracks()[0];
+
+      for (const pc of Object.values(this.peers)) {
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender) sender.replaceTrack(cameraTrack);
+      }
+
+      // 🔑 вернуть отображение камеры в localVideo
+      this.localVideoElement.srcObject = this.localStream;
+
+      this.isScreenSharing = false;
+    } else {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getVideoTracks()[0];
+
+        for (const pc of Object.values(this.peers)) {
+          const sender = pc.getSenders().find(s => s.track?.kind === "video");
+          if (sender) sender.replaceTrack(screenTrack);
+        }
+
+        // 🔑 показать экран локально
+        if (this.localVideoElement) {
+          this.localVideoElement.srcObject = screenStream;
+        }
+
+        // если пользователь сам закрыл шаринг
+        screenTrack.onended = () => this.toggleScreenShare();
+
+        this.isScreenSharing = true;
+      } catch (err) {
+        console.error("Ошибка при шаринге экрана:", err);
+      }
+    }
+  }
+
+
+
+  async shareScreen() {
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = screenStream.getVideoTracks()[0];
+
+      for (const pc of Object.values(this.peers)) {
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender) sender.replaceTrack(screenTrack);
+      }
+
+      screenTrack.onended = () => this.stopScreenShare();
+    } catch (err) {
+      console.error("Ошибка при шаринге экрана:", err);
+    }
+  }
+
+  private stopScreenShare() {
+    if (!this.localStream) return;
+    const cameraTrack = this.localStream.getVideoTracks()[0];
+    for (const pc of Object.values(this.peers)) {
+      const sender = pc.getSenders().find(s => s.track?.kind === "video");
+      if (sender) sender.replaceTrack(cameraTrack);
+    }
+  }
+
 
   private createPeerConnection(id: string) {
     // 🔑 добавляем STUN сервер

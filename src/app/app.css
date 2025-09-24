@@ -1,24 +1,106 @@
 .video-chat {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  height: 100vh;
+  background: #2d2d2d;
+  color: white;
 }
 
-.local video {
-  width: 200px;
-  border: 2px solid green;
-  margin: 5px;
+.videos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px;
+  background: #d1d1d1;
+  border-radius: 0 0 16px 16px;
 }
 
-.remotes {
+.video-cell {
+  position: relative;
+  background: #555;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.controls {
+  margin-top: auto;
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  margin-top: 10px;
+  gap: 12px;
+  padding: 12px;
+  background: #444;
 }
 
-.remotes video {
-  width: 200px;
-  border: 2px solid blue;
-  margin: 5px;
+button {
+  background: #1976d2;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
 }
+button:hover {
+  background: #1565c0;
+}
+button:active {
+  background: #0d47a1;
+}
+.controls button {
+  background: #1976d2;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+}
+
+.controls button {
+  background: #1976d2;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.controls button {
+  background: #1976d2;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.controls button:hover {
+  opacity: 0.85;
+}
+
+/* Микрофон */
+.mic-on {
+  background: #2e7d32 !important; /* зелёный */
+}
+.mic-off {
+  background: #c62828 !important; /* красный */
+}
+
+/* Камера */
+.cam-on {
+  background: #2e7d32 !important; /* зелёный */
+}
+.cam-off {
+  background: #c62828 !important; /* красный */
+}
+
