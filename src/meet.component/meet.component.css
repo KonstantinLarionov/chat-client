@@ -1,0 +1,123 @@
+/* call.component.css */
+.container-fluid {
+  background: linear-gradient(135deg, #1e8b70, #dce7e5);
+}
+
+.bg-success {
+  background: linear-gradient(135deg, #166e59, #1e8b70);
+  width: 80px;
+  height: 60px;
+}
+
+
+.glass-bg {
+  background: linear-gradient(135deg, #e0e0e040, #ffffff20);
+  backdrop-filter: blur(12px);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  color: white;
+  box-shadow: 0 4px 30px rgba(255, 255, 255, 0.44);
+}
+
+.avatar-block {
+  width: 15vw;
+  height: 17vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar-block video {
+  object-fit: cover;   /* или contain */
+  border-radius: 1rem;
+  background: transparent;
+}
+
+.glass-bar {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.glass-btn {
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: none;
+  color: #000;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: all 0.2s ease-in-out;
+}
+.glass-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.05);
+}
+
+.glass-btn-danger {
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: all 0.2s ease-in-out;
+}
+.glass-btn-danger:hover {
+  background: rgba(255, 0, 0, 0.45);
+  transform: scale(1.05);
+}
+
+.video-wrapper-p2p {
+  width: 100%;
+  display: flex;
+  height: 100%;
+  max-height: 100%;      /* не выходить за контейнер */
+  flex-shrink: 1;        /* разрешить уменьшаться */
+}
+.video-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;  /* ПК: горизонтальное */
+  display: flex;
+
+  max-height: 100%;      /* не выходить за контейнер */
+  flex-shrink: 1;        /* разрешить уменьшаться */
+}
+.video-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: transparent;
+  border-radius: 1rem;
+}
+.video-wrapper-p2p video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent;
+  border-radius: 1rem;
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  color: white;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.2);
+}
+
+/* На телефонах вертикальное */
+@media (max-width: 768px) {
+  .video-wrapper {
+    aspect-ratio: 9 / 16;
+  }
+  .avatar-block {
+    margin-bottom: 40px;
+    min-width: 100px;
+    min-height: 150px;
+    aspect-ratio: 9 / 16;
+  }
+}

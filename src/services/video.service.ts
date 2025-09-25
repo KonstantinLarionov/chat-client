@@ -60,37 +60,45 @@ export class VideoChatService {
       }
     });
   }
-
-  async toggleScreenShare(videoElement: HTMLVideoElement) {
+  async toggleScreenShare() {
     if (this.isScreenSharing) {
-      // вернуться на камеру
       if (!this.localStream) return;
       const cameraTrack = this.localStream.getVideoTracks()[0];
       for (const pc of Object.values(this.peers)) {
         const sender = pc.getSenders().find(s => s.track?.kind === "video");
         if (sender) await sender.replaceTrack(cameraTrack);
       }
-      videoElement.srcObject = this.localStream;
-      this.isScreenSharing = false;
-    } else {
-      try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const screenTrack = screenStream.getVideoTracks()[0];
 
+      this.isScreenSharing = false;
+      this.remoteVideoAdded.emit(null!); // вернёмся в p2p
+    } else {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = screenStream.getVideoTracks()[0];
+
+      for (const pc of Object.values(this.peers)) {
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender) await sender.replaceTrack(screenTrack);
+      }
+
+      this.isScreenSharing = true;
+      this.remoteVideoAdded.emit(Object.assign(screenStream, { isScreen: true }));
+
+      screenTrack.onended = async () => {
+        if (!this.localStream) return;
+        const cameraTrack = this.localStream.getVideoTracks()[0];
         for (const pc of Object.values(this.peers)) {
           const sender = pc.getSenders().find(s => s.track?.kind === "video");
-          if (sender) await sender.replaceTrack(screenTrack);
+          if (sender) await sender.replaceTrack(cameraTrack);
         }
-
-        videoElement.srcObject = screenStream;
-
-        screenTrack.onended = () => this.toggleScreenShare(videoElement);
-        this.isScreenSharing = true;
-      } catch (err) {
-        console.error("Ошибка при шаринге экрана:", err);
-      }
+        this.isScreenSharing = false;
+        this.remoteVideoAdded.emit(null!);
+      };
     }
   }
+
+
+
+
 
   private createPeerConnection(id: string) {
     const pc = new RTCPeerConnection({
