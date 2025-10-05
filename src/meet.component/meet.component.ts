@@ -33,7 +33,14 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
       console.log("before",this.viewMode);
       if (!stream) {
         this.screenStream = null;
-        this.viewMode = this.remoteStreams.length > 1 ? 'meet' : 'meet';
+        // Удаляем все потоки, у которых peer больше нет
+        this.remoteStreams = this.remoteStreams.filter(s =>
+          Object.values(this.chat['peers']).some(pc =>
+            Array.from(pc.getReceivers()).some(r => r.track?.id === s.getTracks()[0]?.id)
+          )
+        );
+
+        this.viewMode = this.remoteStreams.length > 0 ? 'meet' : 'p2p';
         return;
       }
 

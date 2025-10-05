@@ -59,6 +59,19 @@ export class VideoChatService {
         }
       }
     });
+    this.socket.on("user-disconnected", (id: string) => {
+      console.log("Пользователь отключился:", id);
+
+      // Закрываем peer-соединение
+      const pc = this.peers[id];
+      if (pc) {
+        pc.close();
+        delete this.peers[id];
+      }
+
+      // Удаляем его поток из списка отображаемых
+      this.remoteVideoAdded.emit(null!);
+    });
   }
   async toggleScreenShare() {
     if (this.isScreenSharing) {

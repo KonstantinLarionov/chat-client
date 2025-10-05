@@ -1,6 +1,6 @@
 /* call.component.css */
 .container-fluid {
-  background: linear-gradient(135deg, #1e8b70, #dce7e5);
+  background: radial-gradient(circle at top left, #0a0a0a 0%, #111133 100%);
 }
 
 .bg-success {
