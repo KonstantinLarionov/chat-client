@@ -1,0 +1,18 @@
+<div class="call-container">
+
+  <div class="video-grid" [ngStyle]="getGridStyle()">
+    <div class="video-tile" *ngFor="let user of participants">
+      <video
+        src="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        autoplay muted loop playsinline></video>
+      <div class="participant-name">{{ user }}</div>
+    </div>
+  </div>
+
+  <div class="control-bar">
+    <button class="control-btn"><i class="bi bi-mic"></i></button>
+    <button class="control-btn"><i class="bi bi-camera-video"></i></button>
+    <button class="control-btn end"><i class="bi bi-telephone-fill"></i></button>
+  </div>
+
+</div>

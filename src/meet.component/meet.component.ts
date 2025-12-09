@@ -2,6 +2,7 @@ import {AfterViewChecked, AfterViewInit, Component, ElementRef, OnInit, ViewChil
 import {CommonModule, NgIf} from '@angular/common';
 import {share} from 'rxjs';
 import {VideoChatService} from '../services/video.service';
+import {ActivatedRoute} from '@angular/router';
 
 @Component({
   selector: 'app-meet.component',
@@ -25,9 +26,10 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
 
   room = 'demo-room';
 
-  constructor(public chat: VideoChatService) {}
+  constructor(public chat: VideoChatService, private route: ActivatedRoute) {}
 
   ngOnInit() {
+    this.room = this.route.snapshot.paramMap.get('id') ?? 'default-room';
     this.chat.remoteVideoAdded.subscribe(stream => {
 
       console.log("before",this.viewMode);
@@ -58,6 +60,27 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
     });
   }
 
+  getGridStyle() {
+    const count = this.remoteStreams.length;
+    let columns = 1;
+
+    if (count === 2) columns = 2;
+    else if (count >= 3 && count <= 4) columns = 2;
+    else if (count >= 5 && count <= 6) columns = 3;
+    else if (count >= 7) columns = 4;
+
+    return {
+      display: 'grid',
+      gap: '8px',
+      padding: '8px',
+      'grid-template-columns': `repeat(${columns}, 1fr)`,
+      'grid-auto-rows': '1fr',
+      width: '100%',
+      height: '100%',
+      'justify-content': 'center',
+      'align-content': 'center'
+    };
+  }
   ngAfterViewInit(){
     this.start();
   }

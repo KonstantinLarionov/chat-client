@@ -11,22 +11,25 @@ export class VideoChatService {
   isScreenSharing = false;
 
   async initLocalVideo(videoElement: HTMLVideoElement, withVideo: boolean = true): Promise<MediaStream> {
+    if (this.localStream) {
+      videoElement.srcObject = this.localStream;
+      return this.localStream;
+    }
+
     this.localStream = await navigator.mediaDevices.getUserMedia({
       video: withVideo,
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
-        autoGainControl: true
+        autoGainControl: false // отключаем автоусиление, чтобы не влияло на громкость
       }
     });
 
-    if (withVideo) {
-      videoElement.srcObject = this.localStream;
-      videoElement.muted = true;
-    }
-
+    videoElement.srcObject = this.localStream;
+    videoElement.muted = true;
     return this.localStream;
   }
+
 
   join(room: string) {
     this.socket.emit("join", room);

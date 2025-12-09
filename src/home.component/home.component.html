@@ -1,0 +1,26 @@
+<div class="neon-container">
+  <div class="content text-center">
+    <h1 class="neon-title mb-4">ReloMeet</h1>
+    <p class="subtitle mb-5">Создай неоновую комнату и пригласи других по ссылке ✨</p>
+
+    <div class="glass-card p-5 rounded-4 shadow">
+      <button class="neon-btn mb-4" (click)="createRoom()">Создать комнату</button>
+
+      <div *ngIf="roomUrl" class="fade-in">
+        <p class="mb-2 text-glow">Ссылка на комнату:</p>
+        <div class="input-group mb-3 justify-content-center mb-3">
+          <input type="text" [value]="roomUrl" readonly class="form-control neon-input text-center">
+          <button class="neon-btn-small ms-2" (click)="copyUrl()">📋</button>
+        </div>
+        <a [routerLink]="roomUrl" class="neon-btn">Перейти в комнату</a>
+      </div>
+
+      <hr class="my-4 neon-line">
+
+      <div class="d-flex justify-content-center flex-column align-items-center">
+        <input #roomInput type="text" class="form-control neon-input mb-3 text-center" placeholder="">
+        <button class="neon-btn-outline" (click)="joinRoom(roomInput.value)">Подключиться</button>
+      </div>
+    </div>
+  </div>
+</div>
