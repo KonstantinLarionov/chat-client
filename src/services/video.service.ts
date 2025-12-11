@@ -1,5 +1,5 @@
-import { Injectable, EventEmitter } from '@angular/core';
-import { io } from 'socket.io-client';
+import {EventEmitter, Injectable} from '@angular/core';
+import {io} from 'socket.io-client';
 
 @Injectable({ providedIn: 'root' })
 export class VideoChatService {
@@ -10,38 +10,80 @@ export class VideoChatService {
   public remoteVideoAdded = new EventEmitter<MediaStream>();
   isScreenSharing = false;
 
-  async initLocalVideo(videoElement: HTMLVideoElement, withVideo: boolean = true): Promise<MediaStream> {
-    if (this.localStream) {
-      videoElement.srcObject = this.localStream;
-      return this.localStream;
+  /** Инициализация: только аудио, камера по умолчанию выключена */
+  async initLocalStream(): Promise<void> {
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: false, // камера НЕ включена
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
+      });
+      this.localStream.getAudioTracks().forEach(t => t.enabled = false);
+    } catch (e) {
+      console.warn("Нет доступа к аудио. Работаем без локального звука.");
+      this.localStream = new MediaStream(); // пустой стрим, чтобы WebRTC работал
     }
-
-    this.localStream = await navigator.mediaDevices.getUserMedia({
-      video: withVideo,
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: false // отключаем автоусиление, чтобы не влияло на громкость
-      }
-    });
-
-    videoElement.srcObject = this.localStream;
-    videoElement.muted = true;
-    return this.localStream;
   }
 
+  /** Включить камеру вручную */
+  async enableCamera(videoElement: HTMLVideoElement) {
+    try {
+      const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const videoTrack = camStream.getVideoTracks()[0];
+
+      this.localStream!.addTrack(videoTrack);
+      videoElement.srcObject = this.localStream!;
+
+      // обновляем видео для всех пиров
+      for (const pc of Object.values(this.peers)) {
+        const sender = pc.getSenders().find(s => s.track?.kind === "video");
+        if (sender) await sender.replaceTrack(videoTrack);
+        else pc.addTrack(videoTrack, this.localStream!);
+      }
+
+      return true;
+    } catch (e) {
+      console.error("Камера недоступна:", e);
+      return false;
+    }
+  }
+
+  /** Выключить камеру */
+  disableCamera() {
+    const track = this.localStream?.getVideoTracks()[0];
+    if (track) track.stop();
+    if (track) this.localStream!.removeTrack(track);
+
+    for (const pc of Object.values(this.peers)) {
+      const sender = pc.getSenders().find(s => s.track?.kind === "video");
+      if (sender) sender.replaceTrack(null as any);
+    }
+  }
 
   join(room: string) {
     this.socket.emit("join", room);
 
     this.socket.on("new-user", async (id: string) => {
+      console.log("🔥 new-user получен:", id, "мой socket.id:", this.socket.id);
+
+      if (id === this.socket.id) {
+        console.log("Игнор self-connection");
+        return; // ❗ Не соединяемся сами с собой!
+      }
+
       const pc = this.createPeerConnection(id);
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       this.socket.emit("offer", { to: id, sdp: offer });
     });
 
+
+    // @ts-ignore
     this.socket.on("offer", async ({ from, sdp }) => {
+      if (from === this.socket.id) return;
+
       const pc = this.createPeerConnection(from);
       await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       const answer = await pc.createAnswer();
@@ -49,11 +91,19 @@ export class VideoChatService {
       this.socket.emit("answer", { to: from, sdp: answer });
     });
 
+
+    // @ts-ignore
     this.socket.on("answer", async ({ from, sdp }) => {
+      if (from === this.socket.id) return;
+
       await this.peers[from].setRemoteDescription(new RTCSessionDescription(sdp));
     });
 
+
+    // @ts-ignore
     this.socket.on("candidate", async ({ from, candidate }) => {
+      if (from === this.socket.id) return;
+
       if (this.peers[from]) {
         try {
           await this.peers[from].addIceCandidate(new RTCIceCandidate(candidate));
@@ -62,65 +112,14 @@ export class VideoChatService {
         }
       }
     });
-    this.socket.on("user-disconnected", (id: string) => {
-      console.log("Пользователь отключился:", id);
-
-      // Закрываем peer-соединение
-      const pc = this.peers[id];
-      if (pc) {
-        pc.close();
-        delete this.peers[id];
-      }
-
-      // Удаляем его поток из списка отображаемых
-      this.remoteVideoAdded.emit(null!);
-    });
   }
-  async toggleScreenShare() {
-    if (this.isScreenSharing) {
-      if (!this.localStream) return;
-      const cameraTrack = this.localStream.getVideoTracks()[0];
-      for (const pc of Object.values(this.peers)) {
-        const sender = pc.getSenders().find(s => s.track?.kind === "video");
-        if (sender) await sender.replaceTrack(cameraTrack);
-      }
-
-      this.isScreenSharing = false;
-      this.remoteVideoAdded.emit(null!); // вернёмся в p2p
-    } else {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = screenStream.getVideoTracks()[0];
-
-      for (const pc of Object.values(this.peers)) {
-        const sender = pc.getSenders().find(s => s.track?.kind === "video");
-        if (sender) await sender.replaceTrack(screenTrack);
-      }
-
-      this.isScreenSharing = true;
-      this.remoteVideoAdded.emit(Object.assign(screenStream, { isScreen: true }));
-
-      screenTrack.onended = async () => {
-        if (!this.localStream) return;
-        const cameraTrack = this.localStream.getVideoTracks()[0];
-        for (const pc of Object.values(this.peers)) {
-          const sender = pc.getSenders().find(s => s.track?.kind === "video");
-          if (sender) await sender.replaceTrack(cameraTrack);
-        }
-        this.isScreenSharing = false;
-        this.remoteVideoAdded.emit(null!);
-      };
-    }
-  }
-
-
-
-
 
   private createPeerConnection(id: string) {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
 
+    // добавляем только доступные треки
     this.localStream?.getTracks().forEach(track =>
       pc.addTrack(track, this.localStream!)
     );
@@ -133,18 +132,56 @@ export class VideoChatService {
 
     pc.ontrack = e => {
       const stream = e.streams[0];
-      if (this.localStream && stream.id === this.localStream.id) return;
 
-      // определяем: экран или камера
-      if (stream.getVideoTracks()[0]?.label.toLowerCase().includes("screen")) {
-        this.remoteVideoAdded.emit(Object.assign(stream, { isScreen: true }));
-      } else {
-        this.remoteVideoAdded.emit(stream);
+      const remoteAudioTracks = stream.getAudioTracks();
+      const localAudioTrack = this.localStream?.getAudioTracks()[0];
+
+      // 🔥 Мьютим только свой собственный звук
+      if (localAudioTrack) {
+        remoteAudioTracks.forEach(t => {
+          if (t.id === localAudioTrack.id) {
+            console.log("🔇 Отключаю собственный звук");
+            t.enabled = false;
+          }
+        });
       }
+
+      this.remoteVideoAdded.emit(stream);
     };
+
 
     this.peers[id] = pc;
     return pc;
   }
-}
 
+  leaveRoom() {
+    console.log("Leaving room...");
+
+    // 1. Закрыть peer connections
+    for (const id of Object.keys(this.peers)) {
+      try {
+        this.peers[id].ontrack = null;
+        this.peers[id].onicecandidate = null;
+        this.peers[id].close();
+      } catch {}
+      delete this.peers[id];
+    }
+
+    // 2. Остановить локальные треки
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        try { track.stop(); } catch {}
+      });
+    }
+    this.localStream = undefined;
+
+    // 3. Отключиться от комнаты
+    this.socket.emit("leave");
+
+    // 4. Закрыть сокет
+    try { this.socket.disconnect(); } catch {}
+
+    console.log("Left room fully.");
+  }
+
+}

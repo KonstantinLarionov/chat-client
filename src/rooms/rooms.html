@@ -1,0 +1,86 @@
+<div class="neon-container fade-in">
+  <div class="glass-card" style="padding: 40px; border-radius: 20px; width: 90%; max-width: 600px;">
+
+    <!-- Заголовок -->
+    <h1 class="neon-title" style="text-align:center; margin-bottom: 10px;">
+      Комнаты
+    </h1>
+    <p class="subtitle" style="text-align:center; margin-bottom: 30px;">
+      Управление локальными чатами
+    </p>
+
+    <!-- Добавление комнаты -->
+    <div style="display:flex; justify-content:center; margin-bottom: 20px;">
+      <input
+        [(ngModel)]="newRoomName"
+        class="neon-input"
+        placeholder="Название комнаты"
+      />
+      <button
+        class="neon-btn-small"
+        style="margin-left:10px;"
+        (click)="addRoom()"
+      >
+        Создать
+      </button>
+    </div>
+    <!-- Добавление комнаты по ссылке -->
+    <div style="display:flex; justify-content:center; margin-bottom: 20px;">
+      <input
+        [(ngModel)]="roomLink"
+        class="neon-input"
+        placeholder="Вставьте ссылку на комнату /meet/ID"
+      />
+      <button
+        class="neon-btn-small"
+        style="margin-left:10px;"
+        (click)="addRoomByLink()"
+      >
+        Добавить
+      </button>
+    </div>
+
+    <hr class="neon-line" />
+
+    <!-- Список комнат -->
+    <div *ngIf="rooms.length === 0" class="text-glow" style="text-align:center; margin-top:20px;">
+      Комнат пока нет — создайте первую ✨
+    </div>
+
+    <div *ngFor="let room of rooms" class="glass-card fade-in"
+         style="margin-top: 20px; padding: 20px; border-radius:16px; cursor:pointer;" (click)="openRoom(room)"
+         >
+
+      <h2 class="text-glow" style="margin:0;">
+        {{ room.name }}
+      </h2>
+
+      <p style="margin: 5px 0 0; color:#b0c4de; font-size:0.9rem;">
+        ID: {{ room.id }}
+      </p>
+
+      <div style="display:flex; gap:10px; justify-content: flex-end; margin-top:10px;">
+
+        <button
+          class="neon-btn-outline"
+          style="padding:6px 16px; font-size:0.8rem;"
+          (click)="renameRoom(room); $event.stopPropagation();"
+        >
+          Переименовать
+        </button>
+
+        <button
+          class="neon-btn-outline"
+          style="padding:6px 16px; font-size:0.8rem; border-color:#ff5555; color:#ff5555;"
+          (click)="deleteRoom(room); $event.stopPropagation();"
+        >
+          Удалить
+        </button>
+
+      </div>
+
+
+    </div>
+
+  </div>
+</div>

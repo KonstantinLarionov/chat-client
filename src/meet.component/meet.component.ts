@@ -2,7 +2,8 @@ import {AfterViewChecked, AfterViewInit, Component, ElementRef, OnInit, ViewChil
 import {CommonModule, NgIf} from '@angular/common';
 import {share} from 'rxjs';
 import {VideoChatService} from '../services/video.service';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
+import {PermissionService} from '../services/permission.service';
 
 @Component({
   selector: 'app-meet.component',
@@ -19,16 +20,20 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
   screenStream: MediaStream | null = null;
 
   mute = false;
-  cam = true;
+  cam = false;
   share = false;
 
   viewMode: 'p2p' | 'meet' | 'sharing' = 'meet'; // начальный режим
 
   room = 'demo-room';
 
-  constructor(public chat: VideoChatService, private route: ActivatedRoute) {}
+  constructor(public chat: VideoChatService, private route: ActivatedRoute,
+              private router: Router,
+              private perms: PermissionService) {}
 
-  ngOnInit() {
+  async ngOnInit() {
+    await this.perms.requestPermissions();
+
     this.room = this.route.snapshot.paramMap.get('id') ?? 'default-room';
     this.chat.remoteVideoAdded.subscribe(stream => {
 
@@ -81,9 +86,11 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
       'align-content': 'center'
     };
   }
-  ngAfterViewInit(){
-    this.start();
+  async ngAfterViewInit() {
+    await this.chat.initLocalStream(); // без камеры
+    this.chat.join(this.room);
   }
+
   ngAfterViewChecked() {
     if (this.cam && this.localVideo && this.chat.localStream) {
       this.localVideo.nativeElement.srcObject = this.chat.localStream;
@@ -92,7 +99,7 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
 
   async start() {
     try {
-      await this.chat.initLocalVideo(this.localVideo.nativeElement);
+      await this.chat.initLocalStream();
       if (!this.localVideo.nativeElement.srcObject) {
         this.localVideo.nativeElement.srcObject = this.chat.localStream!;
       }
@@ -103,18 +110,28 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
   }
 
 
-  toggleCamera() {
+  async toggleCamera() {
     this.cam = !this.cam;
-    const track = this.chat.localStream?.getVideoTracks()[0];
-    console.log(this.localVideo?.nativeElement);
-    if (track) {
-      track.enabled = !track.enabled;
-      if (this.localVideo?.nativeElement) {
-        this.localVideo.nativeElement.srcObject = this.chat.localStream!;
+
+    // Если хотим включить камеру
+    if (this.cam) {
+      const ok = await this.chat.enableCamera(this.localVideo.nativeElement);
+      if (!ok) {
+        this.cam = false;
+        console.warn("Камера недоступна");
       }
+      return;
     }
 
+    // Если хотим выключить камеру
+    this.chat.disableCamera();
+
+    // Обновляем превью
+    if (this.localVideo?.nativeElement) {
+      this.localVideo.nativeElement.srcObject = this.chat.localStream!;
+    }
   }
+
 
   toggleMic() {
     const track = this.chat.localStream?.getAudioTracks()[0];
@@ -127,11 +144,11 @@ export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
 
   async toggleScreen() {
     this.share = !this.share;
-    await this.chat.toggleScreenShare();
   }
 
 
   leave() {
-    window.location.reload();
+    this.chat.leaveRoom();
+    this.router.navigate(['/rooms']); // или твой путь
   }
 }

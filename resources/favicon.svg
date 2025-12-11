@@ -1,0 +1,27 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Фон -->
+  <rect width="64" height="64" rx="12" ry="12" fill="#0a0a0a"/>
+
+  <!-- Текст по центру -->
+  <text
+    x="50%"
+    y="50%"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="Orbitron, sans-serif"
+    font-size="36"
+    fill="url(#grad)"
+    stroke="#00d0ff"
+    stroke-width="1.5"
+    paint-order="stroke">
+    R
+  </text>
+
+  <!-- Градиент -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6f00ff"/>
+      <stop offset="100%" stop-color="#00d0ff"/>
+    </linearGradient>
+  </defs>
+</svg>
