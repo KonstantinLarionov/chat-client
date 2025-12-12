@@ -1,116 +1,131 @@
-<!-- call.component.html -->
-<div class="container-fluid vh-100 d-flex flex-column bg-light ">
-  <ng-container [ngSwitch]="viewMode">
+<div class="container-fluid vh-100 d-flex flex-column bg-light" (click)="onFirstUserAction()">
 
-    <ng-container *ngSwitchCase="'p2p'">
-      <!-- Верхняя панель -->
-      <div class="position-absolute bottom-0 end-0 d-flex justify-content-between align-items-start" style="margin-bottom: 10vh; margin-right: 3vh">
-        <!-- Аватар -->
-        <div class="avatar-block glass-card">
-          <svg *ngIf="!cam" xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
+
+  <!-- ===== ЛОКАЛЬНОЕ ВИДЕО (угол) ===== -->
+  <div class="position-absolute bottom-0 end-0"
+       style="margin-bottom: 10vh; margin-right: 3vh; z-index: 1000">
+
+    <div class="avatar-block glass-card">
+
+      <!-- Видео включено -->
+      <video
+        *ngIf="cam"
+        #localVideo
+        autoplay
+        muted="true"
+        playsinline
+        class="w-100 h-100">
+      </video>
+
+      <!-- Видео выключено – СТАРАЯ ИКОНКА -->
+      <svg
+        *ngIf="!cam"
+        xmlns="http://www.w3.org/2000/svg"
+        width="30"
+        height="30"
+        fill="currentColor"
+        class="bi bi-person-circle"
+        viewBox="0 0 16 16">
+        <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
+        <path fill-rule="evenodd"
+              d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7
+                 a7 7 0 0 0-5.468 11.37C3.242 11.226
+                 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7
+                 0 0 0 8 1"/>
+      </svg>
+
+    </div>
+  </div>
+
+  <!-- ===== ОСНОВНАЯ ЗОНА ===== -->
+  <div class="call-container flex-fill">
+
+    <div class="video-grid" style="padding-bottom: 1%;padding-top: 1%;"
+         [ngStyle]="getGridStyle()">
+
+      <div
+        class="video-tile glass-card"
+        *ngFor="let p of participants">
+
+        <!-- ===== УЧАСТНИК С ВИДЕО ===== -->
+        <video
+          *ngIf="p.hasVideo"
+          [appVideoStream]="p.videoStream"
+          muted
+          autoplay
+          playsinline
+          class="w-100 h-100">
+        </video>
+
+        <!-- ===== УЧАСТНИК БЕЗ ВИДЕО — СТАРАЯ ИКОНКА ===== -->
+        <div
+          *ngIf="!p.hasVideo"
+          class="avatar-block d-flex flex-column justify-content-center align-items-center h-100">
+
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="40"
+            height="40"
+            fill="currentColor"
+            class="bi bi-person-circle"
+            viewBox="0 0 16 16">
             <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
-            <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
+            <path fill-rule="evenodd"
+                  d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7
+                     a7 7 0 0 0-5.468 11.37C3.242 11.226
+                     4.805 10 8 10s4.757 1.225 5.468 2.37A7 7
+                     0 0 0 8 1"/>
           </svg>
-          <video #localVideo [style.display]="cam ? 'block' : 'none'" autoplay muted playsinline class="w-100 h-100" ></video>
-        </div>
-      </div>
 
-      <!-- Основная зона -->
-      <div class="flex-fill d-flex justify-content-center align-items-center p-2">
-        <div class="video-wrapper-p2p flex-fill" *ngFor="let stream of remoteStreams">
-          <video [srcObject]="stream" autoplay playsinline class="w-100 h-100"></video>
-        </div>
-      </div>
-    </ng-container>
-    <ng-container *ngSwitchCase="'meet'">
-      <!-- Верхняя панель -->
-      <div class="position-absolute bottom-0 end-0 d-flex justify-content-between align-items-start" style="margin-bottom: 10vh; margin-right: 3vh; z-index: 99999">
-        <!-- Аватар -->
-        <div class="avatar-block glass-card">
-          <svg  *ngIf="!cam" xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
-            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
-            <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
-          </svg>
-          <video #localVideo [style.display]="cam ? 'block' : 'none'" autoplay muted playsinline class="w-100 h-100"></video>
-        </div>
-      </div>
-      <div class="call-container">
-
-        <div class="video-grid"
-             [ngStyle]="getGridStyle()">
-          <div class="video-tile" *ngFor="let stream of remoteStreams">
-            <video [srcObject]="stream" autoplay playsinline ></video>
+          <div class="mt-2 text-muted small">
+            {{ p.name || p.id.slice(0, 6) }}
           </div>
+
         </div>
+
       </div>
-
-    </ng-container>
-<!--    <ng-container *ngSwitchCase="'meet'">-->
-<!--      &lt;!&ndash; Верхняя панель &ndash;&gt;-->
-<!--      <div class="position-absolute bottom-0 end-0 d-flex justify-content-between align-items-start" style="margin-bottom: 10vh; margin-right: 3vh; z-index: 99999">-->
-<!--        &lt;!&ndash; Аватар &ndash;&gt;-->
-<!--        <div class="avatar-block glass-card">-->
-<!--          <svg  *ngIf="!cam" xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">-->
-<!--            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>-->
-<!--            <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>-->
-<!--          </svg>-->
-<!--          <video #localVideo [style.display]="cam ? 'block' : 'none'" autoplay muted playsinline class="w-100 h-100"></video>-->
-<!--        </div>-->
-<!--      </div>-->
-
-<!--      <div class="container-fluid h-100">-->
-<!--        <div class="row flex-fill h-100">-->
-<!--          <div class="col glass-card d-flex p-1 h-100" *ngFor="let stream of remoteStreams" >-->
-<!--            <div class="video-wrapper-p2p flex-fill h-100">-->
-<!--              <video [srcObject]="stream" autoplay playsinline class="w-100 h-100"></video>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </div>-->
-<!--      </div>-->
-<!--    </ng-container>-->
-
-    <ng-container *ngSwitchCase="'sharing'">
-      <!-- Верхняя панель -->
-      <div class="d-flex justify-content-between align-items-start pb-1 ps-2" style="height: 20%">
-        <!-- Аватар -->
-        <div class="avatar-block glass-card mt-3" *ngFor="let stream of remoteStreams">
-          <div [style.display]="cam ? 'block' : 'none'" class="video-wrapper-p2p flex-fill">
-            <video [srcObject]="stream" autoplay playsinline class="w-100 h-100"></video>
-          </div>
-        </div>
-      </div>
-
-      <!-- Основная зона -->
-      <div class="flex-fill d-flex justify-content-center align-items-center p-2 h-75">
-        <div class="video-wrapper-p2p flex-fill">
-          <video [srcObject]="screenStream" autoplay playsinline class="w-100 h-100"></video>
-        </div>
-      </div>
-    </ng-container>
-
-  </ng-container>
-  <!-- ==== Панель управления ==== -->
+    </div>
+  </div>
+  <!-- ===== ПАНЕЛЬ УПРАВЛЕНИЯ (СТАРЫЕ ИКОНКИ 1-в-1) ===== -->
   <div class="control-bar glass-bar">
+
+    <!-- 🎤 МИКРОФОН -->
     <button class="control-btn glass-btn" (click)="toggleMic()">
+      <!-- mic -->
       <svg *ngIf="!mute" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mic" viewBox="0 0 16 16">
-      <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>
-      <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3"/>
-    </svg>
+        <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>
+        <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3"/>
+      </svg>
       <svg *ngIf="mute" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mic-mute" viewBox="0 0 16 16">
         <path d="M13 8c0 .564-.094 1.107-.266 1.613l-.814-.814A4 4 0 0 0 12 8V7a.5.5 0 0 1 1 0zm-5 4c.818 0 1.578-.245 2.212-.667l.718.719a5 5 0 0 1-2.43.923V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 1 0v1a4 4 0 0 0 4 4m3-9v4.879l-1-1V3a2 2 0 0 0-3.997-.118l-.845-.845A3.001 3.001 0 0 1 11 3"/>
         <path d="m9.486 10.607-.748-.748A2 2 0 0 1 6 8v-.878l-1-1V8a3 3 0 0 0 4.486 2.607m-7.84-9.253 12 12 .708-.708-12-12z"/>
-      </svg></button>
-    <button class="control-btn glass-btn"  (click)="toggleScreen()">      <!-- mic -->
-      <svg *ngIf="!share" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-window-fullscreen" viewBox="0 0 16 16">
-        <path d="M3 3.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m1.5 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m1 .5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>
-        <path d="M.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5zM1 5V2h14v3zm0 1h14v8H1z"/>
-      </svg>
-      <svg *ngIf="share" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-x-square" viewBox="0 0 16 16">
-        <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
-        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
       </svg>
     </button>
-    <button class="control-btn glass-btn"  (click)="toggleCamera()">
+
+
+    <!-- 🖥 ЭКРАН -->
+    <button class="control-btn glass-btn" (click)="toggleScreen()">
+      <!-- screen on -->
+      <svg *ngIf="!share" xmlns="http://www.w3.org/2000/svg"
+           width="20" height="20" fill="currentColor"
+           class="bi bi-window-fullscreen" viewBox="0 0 16 16">
+        <path d="M.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0
+               .5.5h15a.5.5 0 0 0 .5-.5v-13a.5.5
+               0 0 0-.5-.5z"/>
+      </svg>
+
+      <!-- screen off -->
+      <svg *ngIf="share" xmlns="http://www.w3.org/2000/svg"
+           width="20" height="20" fill="currentColor"
+           class="bi bi-x-square" viewBox="0 0 16 16">
+        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0
+               2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+      </svg>
+    </button>
+
+
+    <!-- 🎥 КАМЕРА -->
+    <button class="control-btn glass-btn" (click)="toggleCamera()">
       <!-- cam -->
       <svg *ngIf="cam" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">
         <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
@@ -119,52 +134,15 @@
         <path fill-rule="evenodd" d="M10.961 12.365a2 2 0 0 0 .522-1.103l3.11 1.382A1 1 0 0 0 16 11.731V4.269a1 1 0 0 0-1.406-.913l-3.111 1.382A2 2 0 0 0 9.5 3H4.272l.714 1H9.5a1 1 0 0 1 1 1v6a1 1 0 0 1-.144.518zM1.428 4.18A1 1 0 0 0 1 5v6a1 1 0 0 0 1 1h5.014l.714 1H2a2 2 0 0 1-2-2V5c0-.675.334-1.272.847-1.634zM15 11.73l-3.5-1.555v-4.35L15 4.269zm-4.407 3.56-10-14 .814-.58 10 14z"/>
       </svg>
     </button>
-    <button class="control-btn end  glass-btn" (click)="leave()">
+
+
+    <!-- 🔴 ВЫХОД -->
+    <button class="control-btn end glass-btn" (click)="leave()">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-telephone-fill" viewBox="0 0 16 16">
         <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/>
       </svg>
     </button>
+
   </div>
-  <!-- Нижняя панель -->
-<!--  <div class="position-absolute bottom-0 start-50 translate-middle-x d-flex justify-content-center align-items-center gap-4 mb-3 glass-bar p-3 rounded-pill">-->
-<!--    <button class="btn glass-btn rounded-circle" (click)="toggleMic()">-->
-<!--      &lt;!&ndash; mic &ndash;&gt;-->
-<!--      <svg *ngIf="!mute" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mic" viewBox="0 0 16 16">-->
-<!--        <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>-->
-<!--        <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3"/>-->
-<!--      </svg>-->
-<!--      <svg *ngIf="mute" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mic-mute" viewBox="0 0 16 16">-->
-<!--        <path d="M13 8c0 .564-.094 1.107-.266 1.613l-.814-.814A4 4 0 0 0 12 8V7a.5.5 0 0 1 1 0zm-5 4c.818 0 1.578-.245 2.212-.667l.718.719a5 5 0 0 1-2.43.923V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 1 0v1a4 4 0 0 0 4 4m3-9v4.879l-1-1V3a2 2 0 0 0-3.997-.118l-.845-.845A3.001 3.001 0 0 1 11 3"/>-->
-<!--        <path d="m9.486 10.607-.748-.748A2 2 0 0 1 6 8v-.878l-1-1V8a3 3 0 0 0 4.486 2.607m-7.84-9.253 12 12 .708-.708-12-12z"/>-->
-<!--      </svg>-->
-<!--    </button>-->
 
-<!--    <button class="btn glass-btn rounded-circle" (click)="toggleScreen()">-->
-<!--      &lt;!&ndash; share &ndash;&gt;-->
-<!--      <svg *ngIf="!share" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-window-fullscreen" viewBox="0 0 16 16">-->
-<!--        <path d="M3 3.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m1.5 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m1 .5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1"/>-->
-<!--        <path d="M.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5zM1 5V2h14v3zm0 1h14v8H1z"/>-->
-<!--      </svg>-->
-<!--      <svg *ngIf="share" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-x-square" viewBox="0 0 16 16">-->
-<!--        <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>-->
-<!--        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>-->
-<!--      </svg>-->
-<!--    </button>-->
-
-<!--    <button class="btn glass-btn rounded-circle" (click)="toggleCamera()">-->
-<!--      &lt;!&ndash; cam &ndash;&gt;-->
-<!--      <svg *ngIf="cam" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-camera-video" viewBox="0 0 16 16">-->
-<!--        <path fill-rule="evenodd" d="M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2zm11.5 5.175 3.5 1.556V4.269l-3.5 1.556zM2 4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>-->
-<!--      </svg>-->
-<!--      <svg *ngIf="!cam" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-camera-video-off" viewBox="0 0 16 16">-->
-<!--        <path fill-rule="evenodd" d="M10.961 12.365a2 2 0 0 0 .522-1.103l3.11 1.382A1 1 0 0 0 16 11.731V4.269a1 1 0 0 0-1.406-.913l-3.111 1.382A2 2 0 0 0 9.5 3H4.272l.714 1H9.5a1 1 0 0 1 1 1v6a1 1 0 0 1-.144.518zM1.428 4.18A1 1 0 0 0 1 5v6a1 1 0 0 0 1 1h5.014l.714 1H2a2 2 0 0 1-2-2V5c0-.675.334-1.272.847-1.634zM15 11.73l-3.5-1.555v-4.35L15 4.269zm-4.407 3.56-10-14 .814-.58 10 14z"/>-->
-<!--      </svg>-->
-<!--    </button>-->
-
-<!--    <button class="btn glass-btn-danger rounded-circle" (click)="leave()">-->
-<!--      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-telephone-fill" viewBox="0 0 16 16">-->
-<!--        <path fill-rule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z"/>-->
-<!--      </svg>-->
-<!--    </button>-->
-<!--  </div>-->
 </div>

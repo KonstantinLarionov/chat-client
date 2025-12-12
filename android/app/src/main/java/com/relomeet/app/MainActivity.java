@@ -2,12 +2,15 @@ package com.relomeet.app;
 
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.webkit.WebChromeClient;
 import android.webkit.PermissionRequest;
+import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends BridgeActivity {
@@ -38,16 +41,36 @@ public class MainActivity extends BridgeActivity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
+
     super.onCreate(savedInstanceState);
 
     requestPermissionsIfNeeded();
-    this.bridge.getWebView().setWebChromeClient(new WebChromeClient() {
-      @Override
-      public void onPermissionRequest(final PermissionRequest request) {
-        runOnUiThread(() -> {
-          request.grant(request.getResources());
-        });
+
+    // 🔥 Ждём, пока Capacitor создаст bridge + WebView
+    new Handler().post(() -> {
+      WebView webView = this.bridge.getWebView();
+
+      if (webView == null) {
+        System.out.println("❌ WebView is still null");
+        return;
       }
+
+      System.out.println("🔥 WebView READY");
+
+      webView.getSettings().setJavaScriptEnabled(true);
+      webView.getSettings().setDomStorageEnabled(true);
+      webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
+
+      // WebRTC разрешения
+      webView.setWebChromeClient(new WebChromeClient() {
+        @Override
+        public void onPermissionRequest(final PermissionRequest request) {
+          runOnUiThread(() -> {
+            System.out.println("🔐 WebRTC PermissionRequest: " + Arrays.toString(request.getResources()));
+            request.grant(request.getResources());
+          });
+        }
+      });
     });
   }
 }

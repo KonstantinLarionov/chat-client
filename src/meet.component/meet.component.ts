@@ -1,154 +1,126 @@
-import {AfterViewChecked, AfterViewInit, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {CommonModule, NgIf} from '@angular/common';
-import {share} from 'rxjs';
-import {VideoChatService} from '../services/video.service';
-import {ActivatedRoute, Router} from '@angular/router';
-import {PermissionService} from '../services/permission.service';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  AfterViewChecked,
+  ViewChild,
+  OnDestroy
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { VideoChatService, ParticipantVM } from '../services/video.service';
+import { PermissionService } from '../services/permission.service';
+import { Subscription } from 'rxjs';
+import {VideoStreamDirective} from '../services/VideoStreamDirective';
 
 @Component({
-  selector: 'app-meet.component',
-  imports: [
-    NgIf, CommonModule
-  ],
+  selector: 'app-meet',
+  standalone: true,
+  imports: [CommonModule, VideoStreamDirective],
   templateUrl: './meet.component.html',
   styleUrl: './meet.component.css'
 })
-export class MeetComponent implements OnInit, AfterViewInit, AfterViewChecked {
-  @ViewChild('localVideo', { static: false }) localVideo!: ElementRef<HTMLVideoElement>;
+export class MeetComponent implements OnInit, AfterViewChecked, OnDestroy {
 
-  remoteStreams: MediaStream[] = [];
-  screenStream: MediaStream | null = null;
+  @ViewChild('localVideo') localVideo!: ElementRef<HTMLVideoElement>;
 
-  mute = false;
+  participants: ParticipantVM[] = [];
+  mediaStarted = false;
+  async onFirstUserAction() {
+    if (this.mediaStarted) return;
+
+    this.mediaStarted = true;
+    await this.chat.startMedia();
+  }
+
   cam = false;
+  mute = false;
   share = false;
 
-  viewMode: 'p2p' | 'meet' | 'sharing' = 'meet'; // начальный режим
+  roomId = '';
 
-  room = 'demo-room';
+  private sub?: Subscription;
 
-  constructor(public chat: VideoChatService, private route: ActivatedRoute,
-              private router: Router,
-              private perms: PermissionService) {}
+  constructor(
+    private chat: VideoChatService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private perms: PermissionService
+  ) {}
 
   async ngOnInit() {
+    // 🔥 СНАЧАЛА подписка
+    this.sub = this.chat.participants$.subscribe(p => {
+      this.participants = p;
+    });
+
     await this.perms.requestPermissions();
 
-    this.room = this.route.snapshot.paramMap.get('id') ?? 'default-room';
-    this.chat.remoteVideoAdded.subscribe(stream => {
+    this.roomId = this.route.snapshot.paramMap.get('id') ?? 'default';
+    const userId =
+      localStorage.getItem('lk-user-id')
+      ?? crypto.randomUUID();
 
-      console.log("before",this.viewMode);
-      if (!stream) {
-        this.screenStream = null;
-        // Удаляем все потоки, у которых peer больше нет
-        this.remoteStreams = this.remoteStreams.filter(s =>
-          Object.values(this.chat['peers']).some(pc =>
-            Array.from(pc.getReceivers()).some(r => r.track?.id === s.getTracks()[0]?.id)
-          )
-        );
+    localStorage.setItem('lk-user-id', userId);
 
-        this.viewMode = this.remoteStreams.length > 0 ? 'meet' : 'p2p';
-        return;
-      }
-
-      if ((stream as any).isScreen) {
-        this.screenStream = stream;
-        this.viewMode = 'sharing';
-      } else {
-        if (!this.remoteStreams.find(s => s.id === stream.id)) {
-          this.remoteStreams.push(stream);
-        }
-        this.viewMode = this.remoteStreams.length > 1 ? 'meet' : 'meet';
-      }
-
-      console.log("after",this.viewMode);
-    });
-  }
-
-  getGridStyle() {
-    const count = this.remoteStreams.length;
-    let columns = 1;
-
-    if (count === 2) columns = 2;
-    else if (count >= 3 && count <= 4) columns = 2;
-    else if (count >= 5 && count <= 6) columns = 3;
-    else if (count >= 7) columns = 4;
-
-    return {
-      display: 'grid',
-      gap: '8px',
-      padding: '8px',
-      'grid-template-columns': `repeat(${columns}, 1fr)`,
-      'grid-auto-rows': '1fr',
-      width: '100%',
-      height: '100%',
-      'justify-content': 'center',
-      'align-content': 'center'
-    };
-  }
-  async ngAfterViewInit() {
-    await this.chat.initLocalStream(); // без камеры
-    this.chat.join(this.room);
+    // 🔥 Потом join — как только сервис сделает initExistingParticipants(),
+    // компонент сразу получит список участников (с видео или заглушками)
+    await this.chat.join(this.roomId, userId);
   }
 
   ngAfterViewChecked() {
-    if (this.cam && this.localVideo && this.chat.localStream) {
-      this.localVideo.nativeElement.srcObject = this.chat.localStream;
+    if (!this.cam || !this.localVideo) return;
+
+    const stream = this.chat.getLocalVideoStream();
+    const videoEl = this.localVideo.nativeElement;
+
+    if (stream && videoEl.srcObject !== stream) {
+      videoEl.srcObject = stream;
     }
   }
 
-  async start() {
-    try {
-      await this.chat.initLocalStream();
-      if (!this.localVideo.nativeElement.srcObject) {
-        this.localVideo.nativeElement.srcObject = this.chat.localStream!;
-      }
-    } catch (e) {
-      this.cam = false;
-    }
-    this.chat.join(this.room);
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+    this.chat.leaveRoom();
   }
-
 
   async toggleCamera() {
     this.cam = !this.cam;
-
-    // Если хотим включить камеру
     if (this.cam) {
-      const ok = await this.chat.enableCamera(this.localVideo.nativeElement);
-      if (!ok) {
-        this.cam = false;
-        console.warn("Камера недоступна");
-      }
-      return;
-    }
-
-    // Если хотим выключить камеру
-    this.chat.disableCamera();
-
-    // Обновляем превью
-    if (this.localVideo?.nativeElement) {
-      this.localVideo.nativeElement.srcObject = this.chat.localStream!;
+      await this.chat.enableCamera();
+    } else {
+      this.chat.disableCamera();
     }
   }
 
-
   toggleMic() {
-    const track = this.chat.localStream?.getAudioTracks()[0];
-    if (track) {
-      track.enabled = !track.enabled;
-    }
     this.mute = !this.mute;
-    console.log(this.viewMode)
+    this.chat.setMicMuted(this.mute);
   }
 
   async toggleScreen() {
     this.share = !this.share;
+    await this.chat.toggleScreenShare(this.share);
   }
-
 
   leave() {
     this.chat.leaveRoom();
-    this.router.navigate(['/rooms']); // или твой путь
+    this.router.navigate(['/rooms']);
+  }
+
+  getGridStyle() {
+    const count = this.participants.length;
+    const columns =
+      count <= 1 ? 1 :
+        count <= 4 ? 2 :
+          count <= 6 ? 3 : 4;
+
+    return {
+      display: 'grid',
+      gap: '8px',
+      'grid-template-columns': `repeat(${columns}, 1fr)`,
+      width: '100%',
+      height: '100%'
+    };
   }
 }

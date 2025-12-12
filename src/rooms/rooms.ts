@@ -24,6 +24,16 @@ export class Rooms {
   async ngOnInit() {
     this.rooms = await this.roomService.loadRooms();
   }
+  copyRoomLink(room: any) {
+    const link = `${window.location.origin}/meet/${room.id}`;
+
+    navigator.clipboard.writeText(link)
+      .then(() => {
+        console.log("Ссылка скопирована:", link);
+      })
+      .catch(err => console.error("Ошибка копирования:", err));
+  }
+
   async renameRoom(room: ChatRoom) {
     const newName = prompt('Введите новое имя комнаты:', room.name);
 
